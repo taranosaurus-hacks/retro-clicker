@@ -155,6 +155,9 @@ function renderCommunityProjects(communityProjects) {
     div.innerHTML = `
       <strong>${proj.name}</strong><br>
       Level: ${proj.level || 0} | Cost: ${proj.cost} <br>
+      <div class="progress-bar">
+        <div class="progress-fill" style="width:0%"></div>
+      </div>
     `;
     const btn = document.createElement('button');
     btn.className = 'community-upgrade-btn';

@@ -271,6 +271,12 @@ setInterval(async () => {
   broadcastGameState();
 }, 1000);
 
+// Utility: array -> object keyed by userId
+function playersToObject(players) {
+  const out = {};
+  players.forEach((p) => { out[p.userId] = p; });
+  return out;
+}
 // Build cosmetics: changes for Disco Ball, Rainbow Cursor, Neon Sign
 // But now Neon Sign won't recolor everything; we'll do a new flag "hasNeonSignGif"
 function buildCosmeticFlags(communityProjects) {
@@ -297,11 +303,11 @@ function buildCosmeticFlags(communityProjects) {
 async function broadcastGameState() {
   const allPlayers = await playerDB.find({});
   const allProjects = await projectsDB.find({});
+
   const communityProjects = allProjects.filter((p) => p.type === 'community');
   const personalProjects = allProjects.filter((p) => p.type === 'personal');
 
   const cosmetics = buildCosmeticFlags(communityProjects);
-
   io.emit('gameState', {
     players: arrayToObject(allPlayers),
     communityProjects,
@@ -319,6 +325,41 @@ function arrayToObject(arr) {
 // Chat
 function broadcastChat() {
   io.emit('chatUpdate', messages);
+}
+
+
+function defaultPlayer(name, userId) {
+  return {
+    userId,
+    name,
+    clicks: 0,
+    currency: 0,
+    multiplier: 1,
+    upgrades: {}
+  };
+}
+
+// Chat Helpers
+function embedGifIfNeeded(text) {
+  // If message starts with "gif:" + URL
+  if (text.startsWith('gif:')) {
+    const url = text.slice(4).trim();
+    if (url.startsWith('http') &&
+       (url.endsWith('.gif') || url.endsWith('.png') || url.endsWith('.jpg'))) {
+      return `<img src="${url}" style="max-height:100px;">`;
+    }
+  }
+  return text;
+}
+function applyEmojiReplacements(text) {
+  const replacements = {
+    ':hamster:': '<img src="https://media.giphy.com/media/VbnUQpnihPSIgIXuZv/giphy.gif" style="height:20px;">',
+    ':banana:': '<img src="https://media.giphy.com/media/yidUzriaAGJbsxt58k/giphy.gif" style="height:20px;">'
+  };
+  for (const [key, val] of Object.entries(replacements)) {
+    text = text.replaceAll(key, val);
+  }
+  return text;
 }
 
 // Register/Click/Buy/Chat logic...
@@ -472,5 +513,5 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 server.listen(PORT, () => console.log(`Server running on ${PORT}`));
