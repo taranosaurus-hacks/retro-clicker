@@ -257,6 +257,17 @@ setInterval(async () => {
       await playerDB.update({ userId: pl.userId }, { $set: { currency: pl.currency } });
     }
   }
+  
+  // Then check disco ball level:
+  const discoProj = communityProjects.find(p => p.key === 'discoBall');
+  if (discoProj && discoProj.level >= 10) {
+    // broadcast an event once every minute
+    if (!lastDiscoBroadcast || (Date.now() - lastDiscoBroadcast) > 60000) {
+      lastDiscoBroadcast = Date.now();
+      io.emit('discoParty', { trackUrl: 'https://example.com/disco.mp3' });
+    }
+  }
+
   broadcastGameState();
 }, 1000);
 
@@ -314,7 +325,115 @@ function broadcastChat() {
 // ... only showing Prestige changes:
 
 io.on('connection', (socket) => {
-  // ... registerUser, etc.
+  socket.on('registerUser', async ({ userId, name }) => {
+    if (!userId) {
+      userId = uuidv4();
+      const p = defaultPlayer(name || 'Anonymous', userId);
+      await playerDB.insert(p);
+    } else {
+      let existing = await playerDB.findOne({ userId });
+      if (!existing) {
+        existing = defaultPlayer(name || 'Anonymous', userId);
+        await playerDB.insert(existing);
+      } else {
+        // update name
+        if (name && name !== existing.name) {
+          await playerDB.update({ userId }, { $set: { name } });
+        }
+      }
+    }
+    socketToUserId[socket.id] = userId;
+    const pDoc = await playerDB.findOne({ userId });
+    socket.emit('registered', { userId, player: pDoc });
+    broadcastGameState();
+    broadcastChat();
+  });
+
+  socket.on('playerClicked', async () => {
+    const userId = socketToUserId[socket.id];
+    if (!userId) return;
+    const p = await playerDB.findOne({ userId });
+    p.clicks++;
+    p.currency += (1 * p.multiplier);
+    await playerDB.update({ userId }, { $set: { clicks: p.clicks, currency: p.currency } });
+    broadcastGameState();
+  });
+
+  socket.on('buyUpgrade', async ({ cost, upgradeKey }) => {
+    const userId = socketToUserId[socket.id];
+    if (!userId) return;
+
+    // Validate upgrade is personal
+    const projDef = await projectsDB.findOne({ key: upgradeKey, type: 'personal' });
+    if (!projDef) return;
+
+    const p = await playerDB.findOne({ userId });
+    if (p.currency >= cost) {
+      // Deduct
+      p.currency -= cost;
+      p.upgrades[upgradeKey] = (p.upgrades[upgradeKey] || 0) + 1;
+      await playerDB.update({ userId }, {
+        $set: {
+          currency: p.currency,
+          upgrades: p.upgrades
+        }
+      });
+      broadcastGameState();
+    }
+  });
+
+  socket.on('buyGlobalUpgrade', async (projectKey) => {
+    const userId = socketToUserId[socket.id];
+    if (!userId) return;
+    const p = await playerDB.findOne({ userId });
+
+    // Fetch the project from DB
+    const proj = await projectsDB.findOne({ key: projectKey, type: 'community' });
+    if (!proj) return;
+
+    // Check tier unlocking
+    if (proj.requires) {
+      // ensure that required project is level >= 1
+      const reqProj = await projectsDB.findOne({ key: proj.requires });
+      if (!reqProj || reqProj.level < 1) {
+        // not unlocked yet
+        return; // do nothing
+      }
+    }
+
+    if (p.currency >= proj.cost) {
+      p.currency -= proj.cost;
+      // Increase project level
+      proj.level = (proj.level || 0) + 1;
+      // Increase cost
+      proj.cost = Math.floor(proj.cost * proj.costGrowth);
+
+      // Update DB
+      await playerDB.update({ userId }, { $set: { currency: p.currency } });
+      await projectsDB.update({ _id: proj._id }, { $set: { level: proj.level, cost: proj.cost } });
+      broadcastGameState();
+    }
+  });
+
+  // Chat
+  socket.on('chatMessage', async (msg) => {
+    const userId = socketToUserId[socket.id];
+    if (!userId) return;
+    const p = await playerDB.findOne({ userId });
+    let text = msg.slice(0, 300);
+    text = embedGifIfNeeded(text);
+    text = applyEmojiReplacements(text);
+    const chatObj = {
+      sender: p.name,
+      text,
+      timestamp: new Date().toLocaleTimeString()
+    };
+    messages.push(chatObj);
+    if (messages.length > 50) {
+      messages.shift();
+    }
+    broadcastChat();
+  });
 
   socket.on('prestige', async () => {
     const userId = socketToUserId[socket.id];
@@ -347,7 +466,10 @@ io.on('connection', (socket) => {
     }
   });
 
-  // ...
+  socket.on('disconnect', () => {
+    delete socketToUserId[socket.id];
+    broadcastGameState();
+  });
 });
 
 const PORT = process.env.PORT || 3000;

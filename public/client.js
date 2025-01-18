@@ -8,6 +8,7 @@ let userId = localStorage.getItem('retroClickerUserId');
 const playerNameInput = document.getElementById('player-name');
 const saveNameBtn = document.getElementById('save-name-btn');
 const connectedPlayersEl = document.getElementById('connected-players');
+const playerPrestigeEl = document.getElementById('player-prestige');
 const playerClicksEl = document.getElementById('player-clicks');
 const playerCurrencyEl = document.getElementById('player-currency');
 const playerMultiplierEl = document.getElementById('player-multiplier');
@@ -66,6 +67,12 @@ saveNameBtn.addEventListener('click', () => {
 });
 
 bigClickButton.addEventListener('click', () => {
+  if (confettiEnabled) {
+    confetti({
+      particleCount: 30,
+      spread: 60
+    });
+  }
   socket.emit('playerClicked');
   if (clickSoundEl) {
     clickSoundEl.currentTime = 0;
@@ -137,8 +144,9 @@ function renderPersonalUpgrades(personalProjects) {
 
 function renderCommunityProjects(communityProjects) {
   communityProjectsDiv.innerHTML = '';
-
+  const maxLevel = 20
   communityProjects.forEach((proj) => {
+    const fillPct = Math.min(100, (proj.level / maxLevel) * 100);
     const div = document.createElement('div');
     div.style.margin = '10px';
     div.style.padding = '10px';
@@ -160,13 +168,47 @@ function renderCommunityProjects(communityProjects) {
   });
 }
 
+// public/client.js
+let rainbowCursorLevel = 0; // last known level
+const cursorPool = [
+  'https://cur.cursors-4u.net/cursors/cur-2/cur145.cur', // random
+  'https://cur.cursors-4u.net/cursors/cur-10/cur946.cur', 
+  'https://cur.cursors-4u.net/cursors/cur-4/cur318.cur'
+];
+
+function applyRainbowCursor(level) {
+  const bodyEl = document.body;
+  if (level <= 0) {
+    bodyEl.style.cursor = 'auto';
+    return;
+  }
+  // pick a random from the pool
+  const chosen = cursorPool[Math.floor(Math.random() * cursorPool.length)];
+  bodyEl.style.cursor = `url('${chosen}'), auto`;
+}
+
 // Listen for the main gameState from server
+let confettiEnabled = false;
+
 socket.on('gameState', (gameState) => {
+  const rainbow = gameState.communityProjects.find(p => p.key === 'rainbowCursor');
+  if (rainbow && rainbow.level >= 10) {
+    confettiEnabled = true;
+  } else {
+    confettiEnabled = false;
+  }
   latestGameState = gameState;
   const { players, communityProjects, personalProjects, cosmetics } = gameState;
-
+  
   if (!players || !players[userId]) return; // not recognized yet
   localPlayer = players[userId];
+
+  
+  const me = gameState.players[userId];
+  if (me) {
+    playerPrestigeEl.textContent = me.prestigeCount || 0;
+  }
+
 
   // Update basic stats
   const pIds = Object.keys(players);
@@ -221,18 +263,45 @@ socket.on('gameState', (gameState) => {
   } else {
     discoBallContainer.style.display = 'none';
   }
-  // Rainbow cursor
-  if (cosmetics.hasRainbowCursor) {
-    bodyEl.classList.add('rainbow-cursor');
+  // Rainbow Cursor
+  if (cosmetics.hasRainbowCursor > 0) {
+    // if the level changed, pick a new one
+    if (rainbowCursorLevel !== cosmetics.hasRainbowCursor) {
+      rainbowCursorLevel = cosmetics.hasRainbowCursor;
+      applyRainbowCursor(rainbowCursorLevel);
+    }
   } else {
-    bodyEl.classList.remove('rainbow-cursor');
+    // reset if it was previously set
+    if (rainbowCursorLevel > 0) {
+      rainbowCursorLevel = 0;
+      applyRainbowCursor(0);
+    }
   }
-  // Neon sign
-  if (cosmetics.hasNeonSign) {
-    bodyEl.classList.add('neon-background');
+
+  // Neon Sign container
+  const neonSignContainer = document.getElementById('neon-sign-container');
+  const neonSignImg = document.getElementById('neon-sign-img');
+  if (cosmetics.hasNeonSignGif) {
+    neonSignContainer.style.display = 'block';
+    // We might store the neon sign gif in the server's project def:
+    const neonProject = gameState.communityProjects.find(p => p.key === 'neonSign');
+    if (neonProject && neonProject.gif) {
+      neonSignImg.src = neonProject.gif;
+    } else {
+      // fallback
+      neonSignImg.src = 'https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExZnR0d3V6c3U4Nzk5dmRtM3NmbTVxZnZmcDY2a2FnMXY3cHpkbDgwdiZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/26BRObY948obnZmz6/giphy.gif';
+    }
   } else {
-    bodyEl.classList.remove('neon-background');
+    neonSignContainer.style.display = 'none';
   }
+});
+
+// Disco party
+socket.on('discoParty', (data) => {
+  // maybe have an <audio> element or create one on the fly
+  const discoAudio = new Audio(data.trackUrl);
+  discoAudio.play().catch(err => console.log(err));
+  // Or do something more elaborate: show flashing lights, etc.
 });
 
 // Chat

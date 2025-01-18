@@ -1,24 +1,32 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Retro Clicker 5.0</title>
+  <meta charset="UTF-8" />
+  <title>Retro Clicker - Ultimate Edition</title>
+  <!-- Link to your CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <marquee behavior="scroll" direction="right" scrollamount="3">
-    <!--<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMXA5MWJtcGliemp6cDY0NDI3eHBkMGplanJvMnBpNWd4emVjeGcxNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/w1eatlCL6TSFnt7jjU/giphy.gif" height="50" alt="Under Construction">-->
+
+  <!-- 90s style marquee banner -->
+  <marquee behavior="scroll" direction="right" scrollamount="5">
     <span style="font-family:Comic Sans MS; color:#FF00FF; font-size:24px;">
-      RETRO CLICKER 5.0 ~ TIERED COMMUNITY PROJECTS!
+      UNDER CONSTRUCTION!! ~ This site is the FUTURE of retro gaming! ~
     </span>
-    <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRtd2g4b3FscTh6MXJhODB1eDZkZXRyZDJjaTBmNTFiMjdob2JsMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zkCx85A2VzPaDvCGTM/giphy.gif" height="100" alt="Construction Cone">
+    <img src="https://media4.giphy.com/media/v1.Y2lkPTc5MGI3NjExYzBheWFubG5pbm5jNjR3Y3IxZ2YwaXp5NHljdTRrZ3BqemRzMHdnMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/S5lHiEWiamlCbar3MM/giphy.gif" alt="Dancing Banana" height="50">
   </marquee>
 
   <div id="main-container">
     <h1 style="text-align:center; font-family:Impact; color:#00FF00; background-color:#000;">
-      RETRO CLICKER 5.0
+      RETRO CLICKER - ULTIMATE
     </h1>
 
+    <!-- Neon Sign container (hidden by default) -->
+    <div id="neon-sign-container" style="display:none; text-align:center; margin-bottom:10px;">
+      <img id="neon-sign-img" src="" alt="Neon Sign" style="height:180px;">
+    </div>
+
+    <!-- Background music + toggle -->
     <audio id="bg-music" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop preload="auto"></audio>
     <button id="music-toggle-btn">Play / Pause Music</button>
 
@@ -31,48 +39,63 @@
       <p><strong>Your clicks:</strong> <span id="player-clicks">0</span></p>
       <p><strong>Your currency:</strong> <span id="player-currency">0</span></p>
       <p><strong>Multiplier:</strong> <span id="player-multiplier">1</span></p>
-      <button id="prestige-btn" style="display:none;">Prestige (Reset & Increase Multiplier)</button>
+      <p><strong>Prestige Count:</strong> <span id="player-prestige">0</span></p>
+      <button id="prestige-btn" style="display:none;">Prestige (Reset + Increase Multiplier)</button>
     </div>
 
     <div class="click-area">
       <audio id="click-sound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
       <button id="big-click-button">
-        <img src="https://media.giphy.com/media/IcifS2BM8zLny/giphy.gif" alt="Click Icon" width="80">
+        <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaHUyZG0xY282cjZ5anY5cDlnNzZuM3U2eHVsMnp6aGV6cGR4cThwMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/hHjOpLaawe5rvWvcTn/giphy.gif" alt="Click Icon" width="80">
         <br>
         CLICK ME!!!
       </button>
     </div>
 
-    <div id="disco-ball-container" style="display:none;">
-      <img src="" id="disco-ball-gif" alt="Disco Ball" height="100">
+    <!-- Disco Ball container (shown if unlocked) -->
+    <div id="disco-ball-container" style="display:none; margin:10px;">
+      <img id="disco-ball-gif" src="" alt="Disco Ball" height="100">
     </div>
 
+    <!-- Personal Upgrades Section -->
     <div id="personal-upgrades-container">
       <h2 style="color:yellow; background-color:purple;">PERSONAL UPGRADES</h2>
       <div id="personal-upgrades"></div>
+      <!-- A place to display the images/gifs of owned upgrades -->
       <div id="personal-upgrade-display"></div>
     </div>
 
+    <!-- Community Projects Section -->
     <div id="global-projects-container">
       <h2 style="color:#FF0000; background-color:#00FFFF;">COMMUNITY PROJECTS</h2>
       <div id="community-projects"></div>
     </div>
 
     <hr>
+
+    <!-- Leaderboard -->
     <div id="leaderboard">
       <h2 style="color:#000; background-color:#ff0;">Leaderboard</h2>
       <ol id="leaderboard-list"></ol>
     </div>
 
-    <div id="chat-container">
+    <!-- Chat box -->
+    <div id="chat-container" style="margin-top:20px; text-align:left; background-color:#222; padding:10px; border:3px dotted #fff;">
       <h2>Chat</h2>
-      <div id="chat-messages"></div>
-      <input type="text" id="chat-input" placeholder="Try: :hamster:, :banana:, or gif:URL">
+      <div id="chat-messages" style="height:150px; overflow-y:auto; background-color:#444; padding:5px; margin-bottom:10px;"></div>
+      <input type="text" id="chat-input" placeholder="Type a message...">
       <button id="chat-send-btn">Send</button>
     </div>
   </div>
 
+  <!-- Socket.IO -->
   <script src="/socket.io/socket.io.js"></script>
+
+  <!-- Confetti library (if needed) -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+
+  <!-- Main client code -->
   <script src="client.js"></script>
+
 </body>
 </html>
