@@ -1,0 +1,99 @@
+body {
+    background-image: url('https://media0.giphy.com/media/v1.Y2lkPTc5MGI3NjExOHI3YW5pbzd4NDdhMjNzcWg5cWc3bHhud3A4NDlkb2wzc2Q0ZWZqciZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/U3qYN8S0j3bpK/giphy.gif');
+    background-repeat: repeat;
+    color: #FFFFFF;
+    font-family: "Comic Sans MS", cursive, sans-serif;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #main-container {
+    margin: 10px auto;
+    padding: 20px;
+    border: 5px dotted #F0F;
+    max-width: 900px;
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.7);
+  }
+  
+  .click-area {
+    margin: 20px 0;
+  }
+  
+  #big-click-button {
+    font-size: 20px;
+    padding: 20px;
+    background-color: #FFFF00;
+    color: #000;
+    border: 3px dashed #FF0000;
+    cursor: pointer;
+  }
+  #big-click-button:hover {
+    background-color: #FFA500;
+    color: #FFF;
+  }
+  
+  #disco-ball-container {
+    margin: 10px 0;
+  }
+  
+  #personal-upgrades-container,
+  #global-projects-container {
+    margin: 20px 0;
+  }
+  
+  .personal-upgrade-btn,
+  .community-upgrade-btn {
+    margin: 5px;
+    padding: 6px 10px;
+    background-color: #FF69B4;
+    font-weight: bold;
+    border: 3px ridge #0000FF;
+    color: #000;
+    cursor: pointer;
+  }
+  
+  .personal-upgrade-btn:hover,
+  .community-upgrade-btn:hover {
+    background-color: #FF1493;
+    color: #FFF;
+  }
+  
+  #leaderboard-list {
+    text-align: left;
+    padding-left: 20px;
+  }
+  
+  #chat-container {
+    margin-top: 20px;
+    text-align: left;
+    background-color: #222;
+    padding: 10px;
+    border: 3px dotted #fff;
+  }
+  #chat-messages {
+    height: 150px;
+    overflow-y: auto;
+    background-color: #444;
+    padding: 5px;
+    margin-bottom: 10px;
+  }
+  
+  #personal-upgrade-display img {
+    width: 80px;
+    margin: 4px;
+  }
+  
+  /* Cosmetic classes toggled by JavaScript */
+  .rainbow-cursor {
+    /*cursor: url('https://cur.cursors-4u.net/nature/nat-2/nat189.cur'), auto;*/
+    cursor: url(https://ani.cursors-4u.net/cursors/cur-12/cur1103.ani), 
+    url(https://ani.cursors-4u.net/cursors/cur-12/cur1103.png), 
+    auto !important;
+  }
+  
+  .neon-background {
+    background-color: #f0f !important;
+    background-image: none !important;
+  }
+  

@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Retro Clicker Admin Panel</title>
+  <style>
+    body {
+      background-color: #333;
+      color: #fff;
+      font-family: sans-serif;
+      padding: 20px;
+      margin: 0;
+    }
+    h1, h2, h3 {
+      margin: 10px 0;
+      color: #ff0;
+    }
+    button, select, input {
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 4px;
+      border: 1px solid #999;
+    }
+    table {
+      border-collapse: collapse;
+      margin: 10px 0;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #999;
+      padding: 6px;
+      text-align: left;
+    }
+    .section {
+      background-color: #444;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+    .hidden {
+      display: none;
+    }
+    label {
+      display: block;
+      margin: 4px 0;
+    }
+    .btn {
+      background-color: #666;
+      color: #fff;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #888;
+    }
+    .error-message {
+      color: #f00;
+      font-weight: bold;
+      margin: 5px 0;
+    }
+    #projects-table,
+    #player-table {
+      max-height: 300px;
+      overflow-y: auto;
+      display: block;
+    }
+    #projects-table table,
+    #player-table table {
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Retro Clicker Admin Panel</h1>
+
+  <!-- 1) Admin password / authentication -->
+  <div class="section">
+    <h2>Admin Authentication</h2>
+    <p>Enter Admin Password:</p>
+    <input type="password" id="admin-pass">
+    <button class="btn" id="auth-btn">Authenticate</button>
+    <p class="error-message" id="auth-error" style="display:none;">
+      Incorrect password!
+    </p>
+  </div>
+
+  <!-- 2) Main Admin Controls (hidden until authenticated) -->
+  <div id="admin-controls" class="hidden">
+
+    <!-- GLOBAL SETTINGS -->
+    <div class="section">
+      <h2>Global Settings</h2>
+      <label>Base Prestige Cost:
+        <input type="number" id="basePrestigeCost" value="2000">
+      </label>
+      <label>Prestige Increment:
+        <input type="number" id="prestigeIncrement" value="500">
+      </label>
+      <button class="btn" id="save-global-settings-btn">
+        Save Global Settings
+      </button>
+      <button class="btn" id="refresh-settings-btn">
+        Refresh Settings
+      </button>
+    </div>
+
+    <!-- MANAGE PROJECTS (projects.db) -->
+    <div class="section">
+      <h2>Manage Projects</h2>
+      <!-- This form is used for both "New Project" and "Edit Project" modes -->
+      <div id="project-form" style="background:#555; padding:10px; margin-bottom:10px;">
+        <label>Key: <input type="text" id="proj-key"></label>
+        <label>Name: <input type="text" id="proj-name"></label>
+        <label>Type:
+          <select id="proj-type">
+            <option value="personal">Personal</option>
+            <option value="community">Community</option>
+          </select>
+        </label>
+        <label>Base Cost: <input type="number" id="proj-baseCost" value="100"></label>
+        <label>Cost Growth: <input type="number" step="0.01" id="proj-costGrowth" value="1.2"></label>
+        <label>Base Rate: <input type="number" id="proj-baseRate" value="1"></label>
+        <label>GIF URL: <input type="text" id="proj-gif"></label>
+        <label>Requires (key): <input type="text" id="proj-requires"></label>
+        <label>Community Rate: <input type="number" id="proj-communityRate" placeholder="idle bonus to everyone"></label>
+        <button class="btn" id="add-project-btn">Add / Update Project</button>
+      </div>
+
+      <button class="btn" id="refresh-projects-btn">Refresh Projects List</button>
+      <div id="projects-table"></div>
+    </div>
+
+    <!-- MANAGE PLAYERS / ACTIVE USERS -->
+    <div class="section">
+      <h2>Manage Players</h2>
+      <button class="btn" id="refresh-players-btn">Refresh Player List</button>
+      <div id="player-table"></div>
+
+      <!-- Detailed Player Edit Form -->
+      <div id="player-edit-form" style="background:#555; padding:10px; margin-top:10px;" class="hidden">
+        <h3>Edit Player</h3>
+        <label>UserID: <input type="text" id="edit-userid" readonly></label>
+        <label>Name: <input type="text" id="edit-name"></label>
+        <label>Currency: <input type="number" id="edit-currency"></label>
+        <label>Clicks: <input type="number" id="edit-clicks"></label>
+        <label>Multiplier: <input type="number" id="edit-multiplier"></label>
+        <label>Prestige Count: <input type="number" id="edit-prestige"></label>
+        <button class="btn" id="save-player-btn">Save Changes</button>
+        <button class="btn" id="reset-player-btn">Reset Progress</button>
+        <button class="btn" id="ban-player-btn" style="background:#900;">Ban Player</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /**********************************************************************
+     * CLIENT-SIDE ADMIN PANEL LOGIC
+     **********************************************************************/
+
+    // For demonstration only; store admin password in code is insecure
+    const ADMIN_PASSWORD = "secret123";
+
+    const adminPassInput = document.getElementById('admin-pass');
+    const authBtn = document.getElementById('auth-btn');
+    const authError = document.getElementById('auth-error');
+    const adminControls = document.getElementById('admin-controls');
+
+    // Global Settings
+    const basePrestigeCostInput = document.getElementById('basePrestigeCost');
+    const prestigeIncrementInput = document.getElementById('prestigeIncrement');
+    const saveGlobalSettingsBtn = document.getElementById('save-global-settings-btn');
+    const refreshSettingsBtn = document.getElementById('refresh-settings-btn');
+
+    // Projects
+    const projKeyInput = document.getElementById('proj-key');
+    const projNameInput = document.getElementById('proj-name');
+    const projTypeSelect = document.getElementById('proj-type');
+    const projBaseCostInput = document.getElementById('proj-baseCost');
+    const projCostGrowthInput = document.getElementById('proj-costGrowth');
+    const projBaseRateInput = document.getElementById('proj-baseRate');
+    const projGifInput = document.getElementById('proj-gif');
+    const projRequiresInput = document.getElementById('proj-requires');
+    const projCommunityRateInput = document.getElementById('proj-communityRate');
+
+    const addProjectBtn = document.getElementById('add-project-btn');
+    const refreshProjectsBtn = document.getElementById('refresh-projects-btn');
+    const projectsTableDiv = document.getElementById('projects-table');
+
+    // We'll track an "editModeProjectKey" if we're editing an existing project
+    let editModeProjectKey = null;
+
+    // Players
+    const refreshPlayersBtn = document.getElementById('refresh-players-btn');
+    const playerTableDiv = document.getElementById('player-table');
+
+    // Player edit form
+    const playerEditForm = document.getElementById('player-edit-form');
+    const editUserIdInput = document.getElementById('edit-userid');
+    const editNameInput = document.getElementById('edit-name');
+    const editCurrencyInput = document.getElementById('edit-currency');
+    const editClicksInput = document.getElementById('edit-clicks');
+    const editMultiplierInput = document.getElementById('edit-multiplier');
+    const editPrestigeInput = document.getElementById('edit-prestige');
+    const savePlayerBtn = document.getElementById('save-player-btn');
+    const resetPlayerBtn = document.getElementById('reset-player-btn');
+    const banPlayerBtn = document.getElementById('ban-player-btn');
+
+    /**********************************************************************
+     * AUTH
+     **********************************************************************/
+    authBtn.addEventListener('click', () => {
+      if (adminPassInput.value === ADMIN_PASSWORD) {
+        adminControls.classList.remove('hidden');
+        authError.style.display = 'none';
+        // Load initial data
+        fetchSettings();
+        fetchProjects();
+        fetchPlayers();
+      } else {
+        authError.style.display = 'block';
+      }
+    });
+
+    /**********************************************************************
+     * GLOBAL SETTINGS
+     **********************************************************************/
+    refreshSettingsBtn.addEventListener('click', fetchSettings);
+
+    async function fetchSettings() {
+      try {
+        const res = await fetch('/admin/getSettings');
+        if (!res.ok) throw new Error("Failed to fetch settings");
+        const settings = await res.json();
+        if (settings.basePrestigeCost != null) {
+          basePrestigeCostInput.value = settings.basePrestigeCost;
+        }
+        if (settings.prestigeIncrement != null) {
+          prestigeIncrementInput.value = settings.prestigeIncrement;
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Error fetching settings: " + err);
+      }
+    }
+
+    saveGlobalSettingsBtn.addEventListener('click', async () => {
+      const baseCost = parseInt(basePrestigeCostInput.value, 10) || 2000;
+      const inc = parseInt(prestigeIncrementInput.value, 10) || 500;
+      try {
+        const res = await fetch('/admin/saveSettings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            basePrestigeCost: baseCost,
+            prestigeIncrement: inc
+          })
+        });
+        if (!res.ok) throw new Error("Save settings request failed");
+        alert("Global settings saved!");
+      } catch (err) {
+        alert("Error saving global settings: " + err);
+      }
+    });
+
+    /**********************************************************************
+     * PROJECTS
+     **********************************************************************/
+    refreshProjectsBtn.addEventListener('click', fetchProjects);
+
+    async function fetchProjects() {
+      try {
+        const res = await fetch('/admin/getProjects');
+        if (!res.ok) throw new Error("Failed to fetch projects");
+        const projects = await res.json();
+        renderProjectsTable(projects);
+      } catch (err) {
+        console.error(err);
+        alert("Error fetching projects: " + err);
+      }
+    }
+
+    function renderProjectsTable(projects) {
+      if (!projects || projects.length === 0) {
+        projectsTableDiv.innerHTML = "<p>No projects found.</p>";
+        return;
+      }
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>Key</th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Cost</th>
+              <th>Growth</th>
+              <th>Rate</th>
+              <th>Comm. Rate</th>
+              <th>Level</th>
+              <th>Requires</th>
+              <th>GIF</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      projects.forEach(p => {
+        html += `
+          <tr>
+            <td>${p.key}</td>
+            <td>${p.name}</td>
+            <td>${p.type}</td>
+            <td>${p.baseCost ?? p.cost ?? ''}</td>
+            <td>${p.costGrowth ?? ''}</td>
+            <td>${p.baseRate ?? ''}</td>
+            <td>${p.communityRate ?? ''}</td>
+            <td>${p.level ?? ''}</td>
+            <td>${p.requires ?? ''}</td>
+            <td>${p.gif ? `<a href="${p.gif}" target="_blank">View</a>` : ''}</td>
+            <td>
+              <button class="btn" onclick="editProject('${p.key}')">
+                Edit
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      html += '</tbody></table>';
+      projectsTableDiv.innerHTML = html;
+    }
+
+    // "Edit" for an existing project
+    window.editProject = async function(key) {
+      try {
+        const res = await fetch('/admin/getProject?key=' + key);
+        if (!res.ok) throw new Error("Failed to fetch project data");
+        const proj = await res.json();
+        // Populate form fields
+        projKeyInput.value = proj.key || '';
+        projNameInput.value = proj.name || '';
+        projTypeSelect.value = proj.type || 'personal';
+        projBaseCostInput.value = proj.baseCost ?? proj.cost ?? 100;
+        projCostGrowthInput.value = proj.costGrowth ?? 1.2;
+        projBaseRateInput.value = proj.baseRate ?? 1;
+        projGifInput.value = proj.gif || '';
+        projRequiresInput.value = proj.requires || '';
+        projCommunityRateInput.value = proj.communityRate ?? 0;
+
+        // We store the "editing key" in case the user changes the key field
+        editModeProjectKey = proj.key;
+      } catch (err) {
+        alert("Error loading project data: " + err);
+      }
+    }
+
+    // Add/Update a project
+    addProjectBtn.addEventListener('click', async () => {
+      const data = {
+        // If we want to preserve the original key on an "edit," we can decide
+        key: projKeyInput.value.trim(),
+        name: projNameInput.value.trim(),
+        type: projTypeSelect.value,
+        baseCost: parseFloat(projBaseCostInput.value),
+        costGrowth: parseFloat(projCostGrowthInput.value),
+        baseRate: parseFloat(projBaseRateInput.value),
+        gif: projGifInput.value.trim(),
+        requires: projRequiresInput.value.trim() || null,
+        communityRate: parseFloat(projCommunityRateInput.value) || 0
+      };
+      if (!data.key || !data.name) {
+        return alert("Key and Name are required fields!");
+      }
+
+      // Optionally check if we're editing an existing project's key:
+      // If user changed the key, it effectively becomes a new project
+      // We'll rely on the server logic to handle that.
+      try {
+        const res = await fetch('/admin/addOrUpdateProject', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        if (!res.ok) throw new Error("Add/Update project request failed");
+        alert("Project added/updated successfully!");
+        editModeProjectKey = null; // done editing
+        fetchProjects();
+      } catch (err) {
+        alert("Error adding/updating project: " + err);
+      }
+    });
+
+    /**********************************************************************
+     * PLAYERS
+     **********************************************************************/
+    refreshPlayersBtn.addEventListener('click', fetchPlayers);
+
+    async function fetchPlayers() {
+      try {
+        const res = await fetch('/admin/listPlayers');
+        if (!res.ok) throw new Error("Failed to fetch players");
+        const players = await res.json();
+        renderPlayersTable(players);
+      } catch (err) {
+        console.error(err);
+        alert("Error fetching players: " + err);
+      }
+    }
+
+    function renderPlayersTable(players) {
+      if (!players || players.length === 0) {
+        playerTableDiv.innerHTML = "<p>No players found.</p>";
+        return;
+      }
+      let html = `
+        <table>
+          <thead>
+            <tr>
+              <th>UserID</th>
+              <th>Name</th>
+              <th>Clicks</th>
+              <th>Currency</th>
+              <th>Multiplier</th>
+              <th>Prestige Count</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+      `;
+      players.forEach(pl => {
+        html += `
+          <tr>
+            <td>${pl.userId}</td>
+            <td>${pl.name}</td>
+            <td>${pl.clicks}</td>
+            <td>${Math.floor(pl.currency)}</td>
+            <td>${pl.multiplier || 1}</td>
+            <td>${pl.prestigeCount || 0}</td>
+            <td>
+              <button class="btn" onclick="editPlayer('${pl.userId}')">
+                Edit
+              </button>
+            </td>
+          </tr>
+        `;
+      });
+      html += '</tbody></table>';
+      playerTableDiv.innerHTML = html;
+    }
+
+    window.editPlayer = async function(userId) {
+      try {
+        const res = await fetch('/admin/getPlayer?userId=' + userId);
+        if (!res.ok) throw new Error("Failed to fetch player data");
+        const p = await res.json();
+        editUserIdInput.value = p.userId;
+        editNameInput.value = p.name;
+        editCurrencyInput.value = Math.floor(p.currency);
+        editClicksInput.value = p.clicks;
+        editMultiplierInput.value = p.multiplier || 1;
+        editPrestigeInput.value = p.prestigeCount || 0;
+        playerEditForm.classList.remove('hidden');
+      } catch (err) {
+        alert("Error loading player data: " + err);
+      }
+    }
+
+    // Save changes to the player
+    savePlayerBtn.addEventListener('click', async () => {
+      const userId = editUserIdInput.value.trim();
+      const newData = {
+        userId,
+        name: editNameInput.value.trim(),
+        currency: parseInt(editCurrencyInput.value, 10),
+        clicks: parseInt(editClicksInput.value, 10),
+        multiplier: parseInt(editMultiplierInput.value, 10),
+        prestigeCount: parseInt(editPrestigeInput.value, 10)
+      };
+      try {
+        const res = await fetch('/admin/updatePlayer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newData)
+        });
+        if (!res.ok) throw new Error("Update player request failed");
+        alert("Player updated!");
+        playerEditForm.classList.add('hidden');
+        fetchPlayers();
+      } catch (err) {
+        alert("Error updating player: " + err);
+      }
+    });
+
+    // Reset progress
+    resetPlayerBtn.addEventListener('click', async () => {
+      const userId = editUserIdInput.value.trim();
+      if (!userId) return alert("No user selected!");
+      if (!confirm("Are you sure you want to RESET this player's progress?")) {
+        return;
+      }
+      try {
+        const res = await fetch('/admin/resetPlayer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        if (!res.ok) throw new Error("Reset player request failed");
+        alert("Player progress reset!");
+        playerEditForm.classList.add('hidden');
+        fetchPlayers();
+      } catch (err) {
+        alert("Error resetting player: " + err);
+      }
+    });
+
+    // Ban player
+    banPlayerBtn.addEventListener('click', async () => {
+      const userId = editUserIdInput.value.trim();
+      if (!userId) return alert("No user selected!");
+      if (!confirm("Are you sure you want to BAN this player?")) {
+        return;
+      }
+      try {
+        const res = await fetch('/admin/banUser', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId })
+        });
+        if (!res.ok) throw new Error("Ban user request failed");
+        alert("Player banned!");
+        playerEditForm.classList.add('hidden');
+        fetchPlayers();
+      } catch (err) {
+        alert("Error banning player: " + err);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Retro Clicker 5.0</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <marquee behavior="scroll" direction="right" scrollamount="3">
+    <!--<img src="https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExMXA5MWJtcGliemp6cDY0NDI3eHBkMGplanJvMnBpNWd4emVjeGcxNSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/w1eatlCL6TSFnt7jjU/giphy.gif" height="50" alt="Under Construction">-->
+    <span style="font-family:Comic Sans MS; color:#FF00FF; font-size:24px;">
+      RETRO CLICKER 5.0 ~ TIERED COMMUNITY PROJECTS & ADMIN MANAGEMENT!
+    </span>
+    <img src="https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExbXRtd2g4b3FscTh6MXJhODB1eDZkZXRyZDJjaTBmNTFiMjdob2JsMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/zkCx85A2VzPaDvCGTM/giphy.gif" height="100" alt="Construction Cone">
+  </marquee>
+
+  <div id="main-container">
+    <h1 style="text-align:center; font-family:Impact; color:#00FF00; background-color:#000;">
+      RETRO CLICKER 5.0
+    </h1>
+
+    <audio id="bg-music" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop preload="auto"></audio>
+    <button id="music-toggle-btn">Play / Pause Music</button>
+
+    <div id="player-info">
+      <label for="player-name">Name:</label>
+      <input type="text" id="player-name" placeholder="Enter your name">
+      <button id="save-name-btn">Save</button>
+
+      <p><strong>Online players:</strong> <span id="connected-players">0</span></p>
+      <p><strong>Your clicks:</strong> <span id="player-clicks">0</span></p>
+      <p><strong>Your currency:</strong> <span id="player-currency">0</span></p>
+      <p><strong>Multiplier:</strong> <span id="player-multiplier">1</span></p>
+      <button id="prestige-btn" style="display:none;">Prestige (Reset & Increase Multiplier)</button>
+    </div>
+
+    <div class="click-area">
+      <audio id="click-sound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg" preload="auto"></audio>
+      <button id="big-click-button">
+        <img src="https://media.giphy.com/media/IcifS2BM8zLny/giphy.gif" alt="Click Icon" width="80">
+        <br>
+        CLICK ME!!!
+      </button>
+    </div>
+
+    <div id="disco-ball-container" style="display:none;">
+      <img src="" id="disco-ball-gif" alt="Disco Ball" height="100">
+    </div>
+
+    <div id="personal-upgrades-container">
+      <h2 style="color:yellow; background-color:purple;">PERSONAL UPGRADES</h2>
+      <div id="personal-upgrades"></div>
+      <div id="personal-upgrade-display"></div>
+    </div>
+
+    <div id="global-projects-container">
+      <h2 style="color:#FF0000; background-color:#00FFFF;">COMMUNITY PROJECTS</h2>
+      <div id="community-projects"></div>
+    </div>
+
+    <hr>
+    <div id="leaderboard">
+      <h2 style="color:#000; background-color:#ff0;">Leaderboard</h2>
+      <ol id="leaderboard-list"></ol>
+    </div>
+
+    <div id="chat-container">
+      <h2>Chat</h2>
+      <div id="chat-messages"></div>
+      <input type="text" id="chat-input" placeholder="Try: :hamster:, :banana:, or gif:URL">
+      <button id="chat-send-btn">Send</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="client.js"></script>
+</body>
+</html>
